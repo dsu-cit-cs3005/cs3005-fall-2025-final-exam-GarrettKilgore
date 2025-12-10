@@ -32,7 +32,7 @@ private:
 
         for (const auto& obj : radar_results) 
         {
-            if (obj.m_type == 'R') // Enemy robot
+            if (obj.m_type == '@') // Enemy robot (Ratboy)
             {
                 int distance = calculate_distance(current_row, current_col, obj.m_row, obj.m_col);
                 if (distance <= max_range && distance < closest_distance) 
@@ -141,39 +141,45 @@ public:
 
         if (target_found) 
         {
-            // Move toward the target while avoiding obstacles
+            // Move toward the target
             int row_step = (target_row > current_row) ? 1 : (target_row < current_row) ? -1 : 0;
             int col_step = (target_col > current_col) ? 1 : (target_col < current_col) ? -1 : 0;
 
-            // Prioritize row movement, then column movement
-            if (is_passable(current_row + row_step, current_col)) 
-            {
-                move_direction = (row_step > 0) ? 5 : 1; // Down or Up
-                move_distance = 1;
-            } 
-            else if (is_passable(current_row, current_col + col_step)) 
-            {
-                move_direction = (col_step > 0) ? 3 : 7; // Right or Left
-                move_distance = 1;
-            } 
-            else 
-            {
-                // Stay in place if movement is blocked
-                move_direction = 0;
-                move_distance = 0;
-            }
-
+            // Map row_step and col_step to direction (1-8)
+            if (row_step == -1 && col_step == 0) move_direction = 1;      // N
+            else if (row_step == -1 && col_step == 1) move_direction = 2;  // NE
+            else if (row_step == 0 && col_step == 1) move_direction = 3;   // E
+            else if (row_step == 1 && col_step == 1) move_direction = 4;   // SE
+            else if (row_step == 1 && col_step == 0) move_direction = 5;   // S
+            else if (row_step == 1 && col_step == -1) move_direction = 6;  // SW
+            else if (row_step == 0 && col_step == -1) move_direction = 7;  // W
+            else if (row_step == -1 && col_step == -1) move_direction = 8; // NW
+            else move_direction = 5; // Default to South if at target
+            
+            move_distance = 1;
             return;
         }
 
-        // Random movement if no target is found
-        move_direction = (std::rand() % 8) + 1; // Random direction (1-8)
-        move_distance = 1; // Move 1 space
+        // Smarter movement if no target - try to move toward center
+        int center_row = m_board_row_max / 2;
+        int center_col = m_board_col_max / 2;
+        int row_diff = center_row - current_row;
+        int col_diff = center_col - current_col;
+        
+        if (std::abs(row_diff) > std::abs(col_diff) && row_diff != 0) {
+            move_direction = (row_diff > 0) ? 5 : 1; // Down or Up
+        } else if (col_diff != 0) {
+            move_direction = (col_diff > 0) ? 3 : 7; // Right or Left
+        } else {
+            // At center or completely stuck - try random directions
+            move_direction = (std::rand() % 8) + 1;
+        }
+        move_distance = 1;
     }
 };
 
 // Factory function to create Robot_Flame_e_o
-extern "C" RobotBase* create_robot() 
+extern "C" RobotBase* create_Flame_e_o() 
 {
     return new Robot_Flame_e_o();
 }

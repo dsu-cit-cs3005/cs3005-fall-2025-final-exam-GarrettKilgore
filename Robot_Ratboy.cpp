@@ -44,11 +44,11 @@ public:
     // Radar location for scanning in one of the 8 directions
     virtual void get_radar_direction(int& radar_direction) override 
     {
-        int current_row, current_col;
-        get_current_location(current_row, current_col);
-
-        // Decide radar direction
-        radar_direction = (current_col > 0) ? 7 : 3; // Left or Right
+        static int scan_dir = 1;
+        
+        // Cycle through all 8 directions for better coverage
+        radar_direction = scan_dir;
+        scan_dir = (scan_dir % 8) + 1;
     }
 
     // Processes radar results and updates known obstacles and target
@@ -62,7 +62,7 @@ public:
             add_obstacle(obj);
 
             // Identify the first enemy found as the target
-            if (obj.m_type == 'R' && to_shoot_row == -1 && to_shoot_col == -1) 
+            if (obj.m_type == '!' && to_shoot_row == -1 && to_shoot_col == -1) 
             {
                 to_shoot_row = obj.m_row;
                 to_shoot_col = obj.m_col;
@@ -90,6 +90,51 @@ void get_move_direction(int& move_direction, int& move_distance) override
     get_current_location(current_row, current_col);
     int move = get_move_speed(); // Max movement range for this robot
 
+    // If we have a target, move toward it
+    if (to_shoot_row != -1 && to_shoot_col != -1) 
+    {
+        int row_diff = to_shoot_row - current_row;
+        int col_diff = to_shoot_col - current_col;
+        
+        // Move in the direction that closes the largest gap
+        if (std::abs(row_diff) > std::abs(col_diff)) {
+            move_direction = (row_diff > 0) ? 5 : 1; // Down or Up
+            move_distance = std::min(move, std::abs(row_diff));
+        } else if (col_diff != 0) {
+            move_direction = (col_diff > 0) ? 3 : 7; // Right or Left
+            move_distance = std::min(move, std::abs(col_diff));
+        } else {
+            move_direction = 0;
+            move_distance = 0;
+        }
+        return;
+    }
+
+    // No target detected - use search pattern
+    // Move toward board center (10, 10) to increase encounter probability
+    int center_row = m_board_row_max / 2;
+    int center_col = m_board_col_max / 2;
+    
+    int row_diff = center_row - current_row;
+    int col_diff = center_col - current_col;
+    
+    // Prioritize movement toward center
+    if (std::abs(row_diff) > std::abs(col_diff)) {
+        move_direction = (row_diff > 0) ? 5 : 1; // Down or Up toward center
+        move_distance = std::min(move, std::abs(row_diff));
+    } else if (col_diff != 0) {
+        move_direction = (col_diff > 0) ? 3 : 7; // Right or Left toward center
+        move_distance = std::min(move, std::abs(col_diff));
+    } else {
+        // At center - move in a scanning pattern (cycle through directions)
+        static int scan_direction = 1;
+        move_direction = scan_direction;
+        move_distance = 1;
+        scan_direction = (scan_direction % 8) + 1;
+    }
+    
+    // Old code below kept for reference but not executed
+    /*
     // Step 1: Move left until column == 0
     if (current_col > 0) 
     {
@@ -131,12 +176,13 @@ void get_move_direction(int& move_direction, int& move_distance) override
             move_distance = 1;  // Take a single step down
         }
     }
+    */
 }
 
 };
 
 // Factory function to create Robot_Ratboy
-extern "C" RobotBase* create_robot() 
+extern "C" RobotBase* create_Ratboy() 
 {
     return new Robot_Ratboy();
 }

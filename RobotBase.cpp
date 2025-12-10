@@ -27,7 +27,7 @@ RobotBase::RobotBase(int move_in, int armor_in, WeaponType weapon_in)
     m_grenades = 0;
     if(weapon_in == grenade)
     {
-        m_grenades = 15;
+        m_grenades = 10;  // Per spec: max 10 grenades
     }
 
 
